@@ -22,6 +22,11 @@ var extensions = map[string]string{
 	".gitignore":    "#",
 	".dockerignore": "#",
 	".helmignore":   "#",
+	".tf":           "#",
+	".tfvars":       "#",
+	".bashrc":       "#",
+	"Dockerfile":    "#",
+	"Makefile":      "#",
 }
 
 func addLicenseInFolder(path string, lines []string) {
@@ -40,8 +45,15 @@ func addLicenseInFolder(path string, lines []string) {
 func addLicenseInFile(path string, lines []string) error {
 	cType, ok := extensions[filepath.Ext(path)]
 	if !ok {
+		if cType, ok = extensions[filepath.Base(path)]; !ok {
+			return nil
+		}
+	}
+	if strings.Contains(path, "node_modules/") ||
+		strings.Contains(path, ".min.") {
 		return nil
 	}
+
 	// ok. we match the expression
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
