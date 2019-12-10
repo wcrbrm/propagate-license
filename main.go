@@ -17,7 +17,6 @@ var extensions = map[string]string{
 	".proto":        "//",
 	".sh":           "#",
 	".yml":          "#",
-	".yaml":         "#",
 	".sql":          "--",
 	".gitignore":    "#",
 	".dockerignore": "#",
