@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,12 +27,17 @@ var extensions = map[string]string{
 	"Makefile":      "#",
 }
 
-func addLicenseInFolder(path string, lines []string) {
+func addLicenseInFolder(
+	ctx context.Context,
+	report *Stat,
+	path string,
+	lines []string,
+) {
 	err := filepath.Walk(path, func(fpath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		addLicenseInFile(fpath, lines)
+		addLicenseInFile(ctx, report, fpath, lines)
 		return nil
 	})
 	if err != nil {
@@ -39,7 +45,11 @@ func addLicenseInFolder(path string, lines []string) {
 	}
 }
 
-func addLicenseInFile(path string, lines []string) error {
+func addLicenseInFile(ctx context.Context,
+	report *Stat,
+	path string,
+	lines []string,
+) error {
 	cType, ok := extensions[filepath.Ext(path)]
 	if !ok {
 		if cType, ok = extensions[filepath.Base(path)]; !ok {
@@ -72,16 +82,19 @@ func addLicenseInFile(path string, lines []string) error {
 
 	if strings.Contains(firstLines, "Copyright") {
 		fmt.Println("[ALREADY]     " + path)
+		report.Skipped++
 	} else if strings.Contains(firstLines, "DO NOT EDIT") {
 		fmt.Println("[DO NOT EDIT] " + path)
+		report.DoNotModify++
 	} else {
 		fmt.Println("[INSERTED]    " + path)
 		ioutil.WriteFile(path, []byte(comments+str), 0644)
+		report.Added++
 	}
 	return nil
 }
 
-func downloadLicenseMarkdown(URL string, outFile string) error {
+func downloadLicenseMarkdown(ctx context.Context, URL string, outFile string) error {
 	fmt.Println("Downloading from " + URL)
 
 	// Create the file
@@ -129,17 +142,21 @@ func main() {
 	}
 	lines := strings.Split(snippet, "\\n")
 
+	ctx := context.Background()
+	report := NewStat()
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
 		URL := os.Getenv("LICENSE_URL")
 		if URL != "" && !hasLicenseFile(path) {
-			errD := downloadLicenseMarkdown(URL, path+"/LICENSE")
+			errD := downloadLicenseMarkdown(ctx, URL, path+"/LICENSE")
 			if errD != nil {
 				log.Fatal(errD)
 			}
 		}
-		addLicenseInFolder(path, lines)
+		addLicenseInFolder(ctx, report, path, lines)
 	case mode.IsRegular():
-		addLicenseInFile(path, lines)
+		addLicenseInFile(ctx, report, path, lines)
 	}
+
+	fmt.Println(report.String())
 }
