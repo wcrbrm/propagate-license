@@ -87,17 +87,17 @@ func downloadLicenseMarkdown(URL string, outFile string) error {
 	fmt.Println("Downloading from " + URL)
 
 	// Create the file
-	out, err := os.Create(outFile)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
 	resp, err := http.Get(URL)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	out, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
